@@ -19,6 +19,9 @@ CANONICAL_SERVICE_DEFAULTS: dict[str, dict[str, object]] = {
         "enabled": True,
         "store_backend": "postgres",
     },
+    "startup_status": {
+        "backend": "redis",
+    },
 }
 
 CANONICAL_STORE_DEFAULTS: dict[str, dict[str, object]] = {
@@ -29,6 +32,10 @@ CANONICAL_STORE_DEFAULTS: dict[str, dict[str, object]] = {
 }
 
 _INVALID_MAPPING = object()
+
+_BACKEND_KEY_OVERRIDES: dict[str, str] = {
+    "startup_status": "backend",
+}
 
 
 def is_setup_mode_config(config: Mapping[str, Any]) -> bool:
@@ -67,7 +74,8 @@ def effective_service_backend(
     if service_config.get("enabled") is False:
         return None
 
-    backend = str(service_config.get("store_backend") or "").strip().lower()
+    backend_key = _BACKEND_KEY_OVERRIDES.get(service_key, "store_backend")
+    backend = str(service_config.get(backend_key) or "").strip().lower()
     return backend or None
 
 
@@ -212,7 +220,8 @@ def _inject_backend_runtime_defaults(
     service_config: dict[str, object],
     stack_layout: RuntimeStackLayout,
 ) -> bool:
-    backend = _normalized_backend_value(service_config.get("store_backend"))
+    backend_key = _BACKEND_KEY_OVERRIDES.get(service_key, "store_backend")
+    backend = _normalized_backend_value(service_config.get(backend_key))
     if not backend:
         return False
 

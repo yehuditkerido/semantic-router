@@ -22,17 +22,31 @@ type State struct {
 	UpdatedAt        string   `json:"updated_at,omitempty"`
 }
 
-// Writer persists startup state to a JSON file that can be read by the dashboard.
-type Writer struct {
+// StatusWriter persists startup state so the dashboard (or other consumers)
+// can track router startup progress. Implementations include FileWriter
+// (local JSON file) and RedisWriter (shared key in Redis).
+type StatusWriter interface {
+	Write(state State) error
+}
+
+// FileWriter persists startup state to a JSON file.
+type FileWriter struct {
 	path string
 	mu   sync.Mutex
 }
 
 var statusDirCache sync.Map
 
-// NewWriter creates a writer using a router config path.
-func NewWriter(configPath string) *Writer {
-	return &Writer{path: StatusPathFromConfigPath(configPath)}
+// NewWriter creates a file-based writer using a router config path.
+// Kept for backward compatibility — callers that need the interface should
+// use NewFileWriter instead.
+func NewWriter(configPath string) *FileWriter {
+	return NewFileWriter(configPath)
+}
+
+// NewFileWriter creates a file-based StatusWriter using a router config path.
+func NewFileWriter(configPath string) *FileWriter {
+	return &FileWriter{path: StatusPathFromConfigPath(configPath)}
 }
 
 // StatusPathFromConfigPath returns the runtime status path, preferring the config
@@ -84,8 +98,8 @@ func stablePathToken(path string) string {
 	return fmt.Sprintf("%016x", hasher.Sum64())
 }
 
-// Write persists the provided state atomically.
-func (w *Writer) Write(state State) error {
+// Write persists the provided state atomically to a JSON file.
+func (w *FileWriter) Write(state State) error {
 	if w == nil || w.path == "" {
 		return nil
 	}

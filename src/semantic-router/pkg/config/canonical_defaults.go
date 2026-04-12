@@ -40,6 +40,9 @@ func defaultCanonicalServiceGlobal() CanonicalServiceGlobal {
 			TTLSeconds:   2592000,
 			AsyncWrites:  false,
 		},
+		StartupStatus: StartupStatusConfig{
+			Backend: "file",
+		},
 		Observability: ObservabilityConfig{
 			Metrics: MetricsConfig{
 				Enabled: canonicalBoolPtr(true),
